@@ -30,7 +30,7 @@ str(activity)
 ```
 
 ```{r}
-head(activity, 5)
+head(activity)
 ```
 
 ## What is mean total number of steps taken per day?
@@ -58,8 +58,8 @@ summary(total$sumOfSteps)
 hist(
   total$sumOfSteps,
   col = "gray",
-  main = "Histogram of the (Total Number of (Steps Taken Each Day))",
-  xlab = "(Total Number of (Steps Taken Each Day))",
+  main = "Histogram of the Total Number of Steps Taken Each Day",
+  xlab = "Total Number of Steps Taken Each Day",
   breaks = "Sturges"
 )
 ```
@@ -126,12 +126,13 @@ sum(is.na(activity$steps))
 
 2) Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
-I will use the mean for the 5-minute interval to populate NA values for a given internval.
+A mean for the 5-minute interval will be used in next step for simple imputation of missing values.
 
 3) Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
 ```{r}
 ## merge original activity data frame with interval data frame
+## all.y = F must be set up as a condition
 imputed <- merge(activity, interval, by = 'interval', all.y = F)
 ```
 
@@ -142,7 +143,9 @@ head(imputed)
 
 ```{r}
 ## impute missing values using mean
-imputed$steps[is.na(imputed$steps)] <- round(imputed$meanSteps)
+## imputed$steps[is.na(imputed$steps)] <- round(imputed$meanSteps) doesn't work
+## and generate warning + doesn't impute properly
+imputed$steps[is.na(imputed$steps)] <- round(imputed$meanSteps[is.na(imputed$steps)])
 ```
 
 ```{r}
@@ -172,8 +175,8 @@ summary(totalImp)
 hist(
   totalImp$sumOfSteps,
   col = "gray",
-  main = "Histogram of the (Total Number of (Steps Taken Each Day))",
-  xlab = "(Total Number of (Steps Taken Each Day))",
+  main = "Histogram of the Total Number of Steps Taken Each Day",
+  xlab = "Total Number of Steps Taken Each Day",
   breaks = "Sturges"
 )
 ```
@@ -193,24 +196,27 @@ impMedian
 Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps? 
 
 Original mean:
-```{r}
+```{r, echo=FALSE}
 origMean
 ```
 
 Imputed mean:
-```{r}
-origMedian
-```
-
-Original median:
-```{r}
+```{r, echo=FALSE}
 impMean
 ```
 
+Original median:
+```{r, echo=FALSE}
+origMedian
+```
+
 Imputed median:
-```{r}
+```{r, echo=FALSE}
 impMedian
 ```
+
+After imputation small difference in medians (median decreased after imputation), imputed mean moved towards original median.
+
 
 ##Are there differences in activity patterns between weekdays and weekends?
 
@@ -220,35 +226,34 @@ For this part the weekdays() function may be of some help here. Use the dataset 
 1) Create a new factor variable in the dataset with two levels ??? ???weekday??? and ???weekend??? indicating whether a given date is a weekday or weekend day.
 
 ```{r}
-## create new data frame
+## create new data frame based on imputed data
 copyOfImp <- imputed
 ```
 
 ```{r}
 ## set up language environment
-## without this e.g. in czech you have to use "sobota" and "ned??le" instead of "Saturday" and "Sunday"
+## without this e.g. in Czech you have to use "sobota" and "ned??le" instead of "Saturday" and "Sunday"
 Sys.setlocale("LC_TIME", "English")
 ```
 
 ```{r}
-## logicala true/false test for weekend
+## logical true/false vector for weekend
 weekend <- weekdays(as.Date(copyOfImp$date)) %in% c("Saturday", "Sunday")
 ```
 
 ```{r}
 ## add new column daytype and fill in default value weekday
-copyOfImp$daytype <- "weekday"
+copyOfImp$flag <- "weekday"
 ```
 
 ```{r}
-## replace "weekday" with "weekend" where day == Sat/Sun
-## https://class.coursera.org/repdata-004/forum/thread?thread_id=34#post-472
-copyOfImp$daytype[weekend == TRUE] <- "weekend"
+## replace "weekday" by "weekend" where day corresponds to TRUE in weekend vector
+copyOfImp$flag[weekend == TRUE] <- "weekend"
 ```
 
 ```{r}
 ## convert new character column to factor
-copyOfImp$daytype <- as.factor(copyOfImp$daytype)
+copyOfImp$flag <- as.factor(copyOfImp$flag)
 ```
 
 ```{r}
@@ -260,8 +265,8 @@ str(copyOfImp)
 
 
 ```{r}
-## the average number of steps taken, averaged across all days and intervals
-lastDataFrame <- aggregate(steps ~ interval + daytype, copyOfImp, mean)
+## the number of steps averaged across all days and intervals
+lastDataFrame <- aggregate(steps ~ interval + flag, copyOfImp, mean)
 ```
 
 ```{r}
@@ -278,13 +283,13 @@ head(lastDataFrame)
 ## plot time series using lattice package
 library(lattice)
 xyplot(
-        meanSteps ~ interval | daytype,
-        lastDataFrame,
-        type = "l",
-        layout = c(1,2),
-        main = "Interval vs. Avg Number of Steps Split by Weekend / Week Days",
-        xlab = "Interval",
-        ylab = "Average Number of Steps"
+    meanSteps ~ interval | flag,
+    lastDataFrame,
+    type = "l",
+    layout = c(1,2),
+    main = "Interval vs. Avg Number of Steps Split by Weekend / Weekdays Flag",
+    xlab = "Interval",
+    ylab = "Average Number of Steps"
 )
 ```
 
